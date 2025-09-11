@@ -1,25 +1,65 @@
 import pygame
-import numpy
+from Camera import Camera
+import numpy as np
 
-x_width = 600
-y_width = 400
+#print(v.value)
+width = 500
+height = 500
+depth = 500
 
-x_width = 600
-y_width = 400
+ini_cam_pos, ini_cam_rot = [0,0,0], [0,0,0]
 
-pygame.init()
+c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
+vectors = np.array([
+[0],
+[0],
+[1000]])
+RUNWINDOW = True
 
-screen = pygame.display.set_mode((x_width, y_width))
-pygame.display.set_caption("Custom Size Window")
+if RUNWINDOW:
+    pygame.init()
 
-WHITE = pygame.Color("white")
+    screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Custom Size Window")
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    WHITE = pygame.Color("white")
+    BLACK = pygame.Color("black")
 
-    screen.fill(WHITE)
+    clicking = False
+    ini_position = None
+    current_position = None
 
-    pygame.display.flip()
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                clicking = True
+                ini_position = np.array(pygame.mouse.get_pos())
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                diff = (current_position - ini_position)
+                x_diff, y_diff = (current_position - ini_position)
+                c.rotate2DVector(x_diff, y_diff)
+                projected = c.projectVectors(vectors)
+                print(projected)
+                clicking = False
+
+        screen.fill(WHITE)
+
+        if clicking:
+            current_position = np.array(pygame.mouse.get_pos())
+            pygame.draw.line(screen, BLACK, ini_position, current_position, 2)
+            #print(current_position - ini_position)
+
+
+        pygame.draw.circle(screen, BLACK, (0, 0), 5)
+        projected = c.projectVectors(vectors)
+        #print(projected)
+        for x, y in np.transpose(projected):
+            pygame.draw.circle(screen, BLACK, (x+(width/2), y+(height/2)), 5)
+
+        pygame.display.update()
+        pygame.display.flip()
