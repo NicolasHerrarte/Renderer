@@ -1,2 +1,5 @@
 import numpy as np
-print(np.array((1,3), dtype=np.float32).dtype == np.float64)
+from Matrix import *
+perm = permMatrix([1, -1], 3)
+filtered = np.transpose(np.array([x for x in np.transpose(perm) if x[2]==-1]))
+np.concatenate([filtered, np.array([[0],[0],[1]])],axis=1)

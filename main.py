@@ -1,5 +1,9 @@
 import pygame
 from Camera import Camera
+from Matrix import *
+
+
+from Objects import *
 import numpy as np
 
 #print(v.value)
@@ -7,14 +11,73 @@ width = 500
 height = 500
 depth = 500
 
-ini_cam_pos, ini_cam_rot = [0,0,0], [0,0,0]
+ini_cam_pos, ini_cam_rot = [0,0,0], np.radians([0,0,90])
+
+vectors = np.array([
+[0, 100],
+[0, 100],
+[1000,1000]
+])
+
+edges = np.array([
+    [0]
+])
 
 c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
-vectors = np.array([
-[0],
-[0],
-[1000]])
+cube = Cube(np.array([200,200,200]), [0,0,1000], 1)
+pyramid = Pyramid(np.array([300,300,500]), [500,500,800], 1)
+circle = Specific(vectors, edges)
+objects = [circle]
+
+
+def get_edges(vertices, edges):
+    rows, cols = edges.shape
+    edges_conv = []
+    for i in range(rows):
+        for j in range(cols):
+            if (j < i) and edges[i, j] == 1:
+                edges_conv.append((vertices[:, j], vertices[:, i]))
+
+    return edges_conv
+
+def convert_pos(coordinates):
+    x, y = coordinates
+    new_coordinates = (x+(width/2), y+(height/2))
+    return new_coordinates
+
+def join_edges_matrix(m1, m2):
+    size1, _ = m1.shape
+    size2, _ = m2.shape
+
+    filler = np.zeros((size1, size2))
+    upper = np.concatenate([m1, filler], axis=1)
+    lower = np.concatenate([np.transpose(filler), m2], axis=1)
+    joined = np.concatenate([upper, lower], axis=0)
+    return joined
+
+def combine_all_vectors(objects):
+    if len(objects)==1:
+        return objects[0].getVectors()
+    else:
+        object_vectors = [x.getVectors() for x in objects]
+        final_vectors = np.concatenate(object_vectors, axis=1)
+        return final_vectors
+
+def combine_all_edges(objects):
+    if len(objects) == 1:
+        return objects[0].getEdges()
+    else:
+        object_vectors = [x.getEdges() for x in objects]
+        joint_matrix = join_edges_matrix(object_vectors[0], object_vectors[1])
+        for i in range(2, len(object_vectors)):
+            joint_matrix = join_edges_matrix(joint_matrix, object_vectors[i])
+        return joint_matrix
+
+join_edges_matrix(edges, cube.getEdges())
+
+
 RUNWINDOW = True
+DRAW_EDGES = True
 
 if RUNWINDOW:
     pygame.init()
@@ -24,6 +87,8 @@ if RUNWINDOW:
 
     WHITE = pygame.Color("white")
     BLACK = pygame.Color("black")
+    GRAY = pygame.Color("gray")
+    RED = pygame.Color("red")
 
     clicking = False
     ini_position = None
@@ -42,24 +107,42 @@ if RUNWINDOW:
             elif event.type == pygame.MOUSEBUTTONUP:
                 diff = (current_position - ini_position)
                 x_diff, y_diff = (current_position - ini_position)
+                #print(x_diff, y_diff)
                 c.rotate2DVector(x_diff, y_diff)
-                projected = c.projectVectors(vectors)
-                print(projected)
+                #projected = c.projectVectors(vectors)
+                #displayVectors(projected)
+                #xy_vectors = c.getXYfromVectors(projected)
                 clicking = False
+
 
         screen.fill(WHITE)
 
         if clicking:
             current_position = np.array(pygame.mouse.get_pos())
             pygame.draw.line(screen, BLACK, ini_position, current_position, 2)
-            #print(current_position - ini_position)
+            print(vectors)
+            print(projected)
 
+        added_vectors = combine_all_vectors(objects)
+        projected = c.projectVectors(added_vectors)
+        xy_vectors = c.getXYfromVectors(projected)
+        normal_check = c.checkNormal(added_vectors)
 
-        pygame.draw.circle(screen, BLACK, (0, 0), 5)
-        projected = c.projectVectors(vectors)
-        #print(projected)
-        for x, y in np.transpose(projected):
-            pygame.draw.circle(screen, BLACK, (x+(width/2), y+(height/2)), 5)
+        if DRAW_EDGES:
+            added_edges = combine_all_edges(objects)
+            edges_conv = get_edges(xy_vectors, added_edges)
+            for e in edges_conv:
+                _from, _to = e
+                pygame.draw.line(screen, BLACK, convert_pos(_from), convert_pos(_to), 1)
+
+        xyT = np.transpose(xy_vectors)
+        zipped_data = list(zip(xyT[:,0], xyT[:,1], normal_check))
+        for x, y, normal in zipped_data:
+            if(normal):
+                pygame.draw.circle(screen, BLACK, convert_pos((x, y)), 3)
+            else:
+                pygame.draw.circle(screen, GRAY, convert_pos((x, y)), 2)
+
 
         pygame.display.update()
         pygame.display.flip()

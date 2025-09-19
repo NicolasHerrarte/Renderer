@@ -1,5 +1,7 @@
 import numpy as np
 import math
+from colorama import Fore, Back, Style
+
 np.set_printoptions(suppress=True)
 
 EQUALITY_NUM = 1.e-10
@@ -111,6 +113,14 @@ def quatInv(quat, decimals=8):
 
     return np.array([q0, -q1, -q2, -q3])
 
+def displayVectors(vectors, special=False):
+    vectors = np.transpose(vectors)
+    for v in vectors:
+        v = [str(x) for x in v]
+        if special:
+            print(Fore.BLUE+"("+",".join(v)+")"+Style.RESET_ALL)
+        else:
+            print("(" + ",".join(v) + ")")
 
 
 
