@@ -11,12 +11,12 @@ width = 500
 height = 500
 depth = 500
 
-ini_cam_pos, ini_cam_rot = [0,0,0], np.radians([0,0,90])
+ini_cam_pos, ini_cam_rot = [0,0,0], np.radians([0,0,0])
 
 vectors = np.array([
-[0, 100],
-[0, 100],
-[1000,1000]
+[0],
+[100],
+[1000]
 ])
 
 edges = np.array([
@@ -24,10 +24,11 @@ edges = np.array([
 ])
 
 c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
-cube = Cube(np.array([200,200,200]), [0,0,1000], 1)
-pyramid = Pyramid(np.array([300,300,500]), [500,500,800], 1)
-circle = Specific(vectors, edges)
-objects = [circle]
+cube = Object3D(Cube(np.array([200,200,200])), [0,0,1000], np.radians(np.array([45,45,0])))
+pyramid = Object3D(Pyramid(np.array([300,300,700])), [700,800,2000], np.radians(np.array([0,45,90])))
+circle = Object3D(Circle(300, 100), [-500,-500,1500], np.radians(np.array([0,0,0])))
+#o = Object3D(Specific(vectors, edges), [0,0,0], np.radians(np.array([0,0,0])))
+objects = [cube, pyramid, circle]
 
 
 def get_edges(vertices, edges):
@@ -73,11 +74,18 @@ def combine_all_edges(objects):
             joint_matrix = join_edges_matrix(joint_matrix, object_vectors[i])
         return joint_matrix
 
+def post_process(vectors):
+    correction_matrix = np.array([[1,0],[0,-1]])
+    new_vectors = np.matmul(correction_matrix, vectors)
+    return new_vectors
+
+
 join_edges_matrix(edges, cube.getEdges())
 
 
 RUNWINDOW = True
 DRAW_EDGES = True
+DRAW_VERTEX = False
 
 if RUNWINDOW:
     pygame.init()
@@ -106,7 +114,7 @@ if RUNWINDOW:
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 diff = (current_position - ini_position)
-                x_diff, y_diff = (current_position - ini_position)
+                x_diff, y_diff = post_process(current_position - ini_position)
                 #print(x_diff, y_diff)
                 c.rotate2DVector(x_diff, y_diff)
                 #projected = c.projectVectors(vectors)
@@ -125,7 +133,8 @@ if RUNWINDOW:
 
         added_vectors = combine_all_vectors(objects)
         projected = c.projectVectors(added_vectors)
-        xy_vectors = c.getXYfromVectors(projected)
+        pre_xy_vectors = c.getXYfromVectors(projected)
+        xy_vectors = post_process(pre_xy_vectors)
         normal_check = c.checkNormal(added_vectors)
 
         if DRAW_EDGES:
@@ -135,13 +144,14 @@ if RUNWINDOW:
                 _from, _to = e
                 pygame.draw.line(screen, BLACK, convert_pos(_from), convert_pos(_to), 1)
 
-        xyT = np.transpose(xy_vectors)
-        zipped_data = list(zip(xyT[:,0], xyT[:,1], normal_check))
-        for x, y, normal in zipped_data:
-            if(normal):
-                pygame.draw.circle(screen, BLACK, convert_pos((x, y)), 3)
-            else:
-                pygame.draw.circle(screen, GRAY, convert_pos((x, y)), 2)
+        if DRAW_VERTEX:
+            xyT = np.transpose(xy_vectors)
+            zipped_data = list(zip(xyT[:,0], xyT[:,1], normal_check))
+            for x, y, normal in zipped_data:
+                if(normal):
+                    pygame.draw.circle(screen, BLACK, convert_pos((x, y)), 3)
+                else:
+                    pygame.draw.circle(screen, GRAY, convert_pos((x, y)), 2)
 
 
         pygame.display.update()

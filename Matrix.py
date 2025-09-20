@@ -20,6 +20,24 @@ def permMatrix(nums, iterations):
 
     return lower_gear
 
+def colShiftMatrix(size, shifts):
+    I = np.identity(size)
+    for i in range(shifts):
+        tmp = np.copy([I[-1]])
+        I = np.concatenate([tmp, I], axis=0)
+        I = I[0:-1]
+    return I
+
+def overlapHalvesMatrix(M):
+    MT = np.transpose(M)
+    addM_MT = M+MT
+    rows, cols = M.shape
+    for i in range(rows):
+        for j in range(cols):
+            if (j > i):
+                addM_MT[i, j] = 0
+    return addM_MT
+
 def rotEulerMatrix(euler, decimals=8):
     euler = np.round(euler, decimals)
     x, y, z = euler
@@ -121,7 +139,6 @@ def displayVectors(vectors, special=False):
             print(Fore.BLUE+"("+",".join(v)+")"+Style.RESET_ALL)
         else:
             print("(" + ",".join(v) + ")")
-
 
 
 
