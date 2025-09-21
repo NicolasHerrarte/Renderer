@@ -1,5 +1,6 @@
 from Matrix import *
-import math
+
+CAMERA_DEFAULT_BASE = "REGULAR"
 class Camera:
     def __init__(self, origin, euler_rotation, width, height, depth):
         self.origin = origin
@@ -25,11 +26,11 @@ class Camera:
             Q, _  = np.linalg.qr(A)
             return Q
 
-    def projectionMatrix(self, mode="ORTHONORMAL"):
+    def projectionMatrix(self, mode=CAMERA_DEFAULT_BASE):
         if mode == "REGULAR":
             A = self.getVectorsBase(mode)
             AT = np.transpose(A)
-            inv_ATA = np.invert(np.matmul(AT, A))
+            inv_ATA = np.linalg.inv(np.matmul(AT, A))
             P = np.matmul(np.matmul(A, inv_ATA), AT)
 
         elif mode == "ORTHONORMAL":
@@ -39,7 +40,7 @@ class Camera:
 
         return P
 
-    def errorMatrix(self, mode="ORTHONORMAL"):
+    def errorMatrix(self, mode=CAMERA_DEFAULT_BASE):
         P = self.projectionMatrix(mode)
         return np.subtract(np.identity(P.shape[0]), P)
 

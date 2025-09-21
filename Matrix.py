@@ -140,6 +140,24 @@ def displayVectors(vectors, special=False):
         else:
             print("(" + ",".join(v) + ")")
 
+def binMatrixToVectors(matrix):
+    n, _ = matrix.shape
+    vectors = []
+    for i in range(n):
+        for j in range(n):
+            if matrix[i, j] == 1:
+                vectors.append([j, i])
+
+    return np.transpose(np.array(vectors))
+
+def extendVectorbyMagnitud(vector, magnitud):
+    m = np.linalg.norm(vector)
+    ratio = (m+magnitud)/m
+    new_vector = vector*ratio
+    return np.array(new_vector)
+
+
+print(colShiftMatrix(10, 2))
 
 
 

@@ -1,4 +1,5 @@
 from Matrix import *
+from Discrete import *
 
 class Object3D:
     def __init__(self, generator, position, euler_rotation):
@@ -115,5 +116,97 @@ class Circle:
     def getEdges(self):
         S = colShiftMatrix(self.resolution, 1)
         return overlapHalvesMatrix(S)
+
+
+class SemiCircle:
+    def __init__(self, radius, resolution, order="NORMAL"):
+        self.radius = radius
+        self.resolution = resolution
+        self.order = order
+
+    def getVertex(self):
+        vectors = np.array([
+            [0],
+            [1],
+            [0]
+        ])
+
+        #print(np.transpose([vectors[:, -1]]))
+        euler_rot = [0, 0, math.pi/self.resolution]
+        quat = eulerToQuaternion(euler_rot)
+        rot_mat = rotQuatMatrix(quat)
+        for i in range(self.resolution):
+            new_vector = np.matmul(rot_mat, np.transpose([vectors[:, -1]]))
+            vectors = np.concatenate([vectors, new_vector], axis=1)
+
+        circle_vectors = vectors*self.radius
+        if self.order == "CONVEYOR":
+            circle_vectors = conveyorVertex(circle_vectors, 1)
+            #print(circle_vectors)
+        return circle_vectors
+
+    def getEdges(self):
+        S = colShiftMatrix(self.resolution*2, 1)[0:self.resolution+1,0:self.resolution+1]
+        if self.order == "CONVEYOR":
+            S = conveyorEdges(S, 1)
+            #S = overlapHalvesMatrix(S)
+            print(S)
+        return S
+
+class Sphere:
+    def __init__(self, radius, segments, rings):
+        self.radius = radius
+        self.segments = segments
+        self.rings = rings
+        self.base = SemiCircle(500, self.rings, "CONVEYOR")
+
+    def getVertex(self):
+        base = self.base.getVertex()
+        static = base[:,0:2]
+        rotate = base[:,2:]
+
+        print(static.shape)
+        print(rotate.shape)
+        print(base.shape)
+        vector_n = rotate.shape[1]
+        print(vector_n)
+
+        euler_rot = [0,(2*math.pi) / self.segments, 0]
+        quat = eulerToQuaternion(euler_rot)
+        rot_mat = rotQuatMatrix(quat)
+
+        for i in range(self.segments-1):
+            new_rotate = np.matmul(rot_mat, rotate[:, vector_n*i:vector_n*(i+1)])
+            rotate = np.concatenate([rotate, new_rotate], axis=1)
+
+        return np.concatenate([static, rotate], axis=1)
+
+    def getEdges(self):
+        base = self.base.getEdges()
+        base_shape = base.shape[0]
+        vector_n = base.shape[0]-2
+        mold = np.zeros((2+(self.segments)*vector_n, 2+(self.segments)*vector_n))
+
+        bin_vectors = binMatrixToVectors(base)
+        bin_vectors[1] = bin_vectors[1]-1
+
+        for i in range(1,self.segments):
+            norm_bin = np.array((bin_vectors!=0)).astype(int)*vector_n*i
+            added_bin = bin_vectors+norm_bin
+            for x, y in np.transpose(added_bin):
+                mold[y+1, x] = 1
+
+        horizontal_vertex = colShiftMatrix((self.segments)*vector_n, vector_n)
+        #print(horizontal_vertex)
+        mold[2:, 2:] = mold[2:, 2:]+horizontal_vertex
+        mold[0:base_shape, 0:base_shape] = base
+        mold = overlapHalvesMatrix(mold)
+        return mold
+
+
+
+s = Sphere(1, 3, 3)
+print(s.getVertex().shape)
+print(s.getEdges())
 
 

@@ -24,11 +24,15 @@ edges = np.array([
 ])
 
 c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
-cube = Object3D(Cube(np.array([200,200,200])), [0,0,1000], np.radians(np.array([45,45,0])))
-pyramid = Object3D(Pyramid(np.array([300,300,700])), [700,800,2000], np.radians(np.array([0,45,90])))
-circle = Object3D(Circle(300, 100), [-500,-500,1500], np.radians(np.array([0,0,0])))
+cube = Object3D(Cube(np.array([200,500,200])), [0,0,1000], np.radians(np.array([45,45,0])))
+pyramid = Object3D(Pyramid(np.array([300,300,500])), [700,800,2000], np.radians(np.array([0,45,90])))
+circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), [-500,-500,1500], np.radians(np.array([0,0,0])))
+sphere = Object3D(Sphere(100, 10, 10), [-1000,-1000,2500], np.radians(np.array([0,0,0])))
 #o = Object3D(Specific(vectors, edges), [0,0,0], np.radians(np.array([0,0,0])))
-objects = [cube, pyramid, circle]
+objects = [cube, pyramid, sphere]
+
+
+
 
 
 def get_edges(vertices, edges):
