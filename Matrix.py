@@ -156,6 +156,52 @@ def extendVectorbyMagnitud(vector, magnitud):
     new_vector = vector*ratio
     return np.array(new_vector)
 
+def getBase3Points(vectors, mode):
+    a = vectors[:, 0]
+    b = vectors[:, 1]
+    c = vectors[:, 2]
+
+    u = np.expand_dims(a - b, axis=0)
+    v = np.expand_dims(a - c, axis=0)
+    A = np.transpose(np.concatenate([u, v], axis=0))
+
+    if mode == "REGULAR":
+        return A
+    elif mode == "ORTHONORMAL":
+        Q, _ = np.linalg.qr(A)
+        return Q
+
+def getNormalBase(vectors, unit=True):
+    u = vectors[:, 0]
+    v = vectors[:, 1]
+    cross_vector = np.cross(v, u)
+    if not unit:
+        return cross_vector
+    else:
+        normal_vector = cross_vector / np.linalg.norm(cross_vector)
+        return normal_vector
+
+def projectionMatrixBase(base, mode):
+    if mode == "REGULAR":
+        A = base
+        AT = np.transpose(A)
+        inv_ATA = np.linalg.inv(np.matmul(AT, A))
+        P = np.matmul(np.matmul(A, inv_ATA), AT)
+
+    elif mode == "ORTHONORMAL":
+        Q = base
+        QT = np.transpose(Q)
+        P = np.matmul(Q, QT)
+
+    return P
+
+def getEquationNormal(a, normal_vector):
+    constant = np.matmul(np.transpose(a), normal_vector)
+    D = -constant
+
+    plane_equation = np.concatenate([normal_vector, [D]])
+    return plane_equation
+
 
 print(colShiftMatrix(10, 2))
 

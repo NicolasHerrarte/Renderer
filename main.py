@@ -1,39 +1,8 @@
 import pygame
 from Camera import Camera
 from Matrix import *
-
-
 from Objects import *
 import numpy as np
-
-#print(v.value)
-width = 500
-height = 500
-depth = 500
-
-ini_cam_pos, ini_cam_rot = [0,0,0], np.radians([0,0,0])
-
-vectors = np.array([
-[0],
-[100],
-[1000]
-])
-
-edges = np.array([
-    [0]
-])
-
-c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
-cube = Object3D(Cube(np.array([200,500,200])), [0,0,1000], np.radians(np.array([45,45,0])))
-pyramid = Object3D(Pyramid(np.array([300,300,500])), [700,800,2000], np.radians(np.array([0,45,90])))
-circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), [-500,-500,1500], np.radians(np.array([0,0,0])))
-sphere = Object3D(Sphere(100, 10, 10), [-1000,-1000,2500], np.radians(np.array([0,0,0])))
-#o = Object3D(Specific(vectors, edges), [0,0,0], np.radians(np.array([0,0,0])))
-objects = [cube, pyramid, sphere]
-
-
-
-
 
 def get_edges(vertices, edges):
     rows, cols = edges.shape
@@ -83,9 +52,38 @@ def post_process(vectors):
     new_vectors = np.matmul(correction_matrix, vectors)
     return new_vectors
 
+#print(v.value)
+width = 500
+height = 500
+depth = 500
 
+ini_cam_pos, ini_cam_rot = [0,0,0], np.radians([0,0,0])
+
+vectors = np.array([
+[0],
+[100],
+[1000]
+])
+
+edges = np.array([
+    [0]
+])
+
+c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
+cube = Object3D(Cube(np.array([300,300,300])), [0,0,1000], np.radians(np.array([45,45,0])))
+pyramid = Object3D(Pyramid(np.array([300,300,500])), [700,800,2000], np.radians(np.array([0,0,0])))
+circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), [-500,-500,1500], np.radians(np.array([0,0,0])))
+sphere = Object3D(Sphere(50, 50, 10), [-1000,-1000,2500], np.radians(np.array([0,0,0])))
+#o = Object3D(Specific(vectors, edges), [0,0,0], np.radians(np.array([0,0,0])))
+objects = [cube, pyramid, sphere]
+
+
+added_vectors = combine_all_vectors(objects)
 join_edges_matrix(edges, cube.getEdges())
-
+projected = c.projectVectors(added_vectors)
+pre_xy_vectors = c.getXYfromVectors(projected)
+xy_vectors = post_process(pre_xy_vectors)
+normal_check = c.checkNormal(added_vectors)
 
 RUNWINDOW = True
 DRAW_EDGES = True
@@ -119,11 +117,12 @@ if RUNWINDOW:
             elif event.type == pygame.MOUSEBUTTONUP:
                 diff = (current_position - ini_position)
                 x_diff, y_diff = post_process(current_position - ini_position)
-                #print(x_diff, y_diff)
                 c.rotate2DVector(x_diff, y_diff)
-                #projected = c.projectVectors(vectors)
-                #displayVectors(projected)
-                #xy_vectors = c.getXYfromVectors(projected)
+                added_vectors = combine_all_vectors(objects)
+                projected = c.projectVectors(added_vectors)
+                pre_xy_vectors = c.getXYfromVectors(projected)
+                xy_vectors = post_process(pre_xy_vectors)
+                normal_check = c.checkNormal(added_vectors)
                 clicking = False
 
 
@@ -132,14 +131,9 @@ if RUNWINDOW:
         if clicking:
             current_position = np.array(pygame.mouse.get_pos())
             pygame.draw.line(screen, BLACK, ini_position, current_position, 2)
-            print(vectors)
-            print(projected)
+            #print(vectors)
+            #print(projected)
 
-        added_vectors = combine_all_vectors(objects)
-        projected = c.projectVectors(added_vectors)
-        pre_xy_vectors = c.getXYfromVectors(projected)
-        xy_vectors = post_process(pre_xy_vectors)
-        normal_check = c.checkNormal(added_vectors)
 
         if DRAW_EDGES:
             added_edges = combine_all_edges(objects)
