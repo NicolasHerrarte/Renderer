@@ -33,6 +33,11 @@ class Dynamic3D:
         rotated = np.matmul(self.quat_matrix, shifted)
         relocated = translateH(rotated, self.rotation_center)
         self.vectors = relocated
+
+    def translate(self):
+        shifted = translateH(self.vectors, self.translation_anim)
+        self.vectors = shifted
+
     def getVectors(self):
         return self.vectors
 

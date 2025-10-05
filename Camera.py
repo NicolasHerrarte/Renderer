@@ -4,11 +4,13 @@ from Matrix import *
 
 CAMERA_DEFAULT_BASE = "REGULAR"
 class Camera:
-    def __init__(self, origin, euler_rotation, width, height, depth):
+    def __init__(self, origin, euler_rotation, velocity, width, height, depth):
         self.origin = origin
         self.width = width
         self.height = height
         self.depth = depth
+        self.velocity = velocity
+        self.position = np.zeros((3,))
         self.euler_rotation = euler_rotation
         self.quat_rotation = eulerToQuaternion(self.euler_rotation)
         self.corners = 0.5 * np.matmul(np.array([[self.width, 0], [0, self.height], [0, 0]]), permMatrix([1, -1], 2))
@@ -22,6 +24,24 @@ class Camera:
         self.p_matrix = projectionMatrixBase(self.usable_base, CAMERA_DEFAULT_BASE)
         self.e_matrix = np.subtract(np.identity(self.p_matrix.shape[0]), self.p_matrix)
         self.equation = getEquationNormal(self.corners[:, 0], self.normal)
+
+    def move(self, direction):
+        direction_vector = np.array([0,0,0])
+        if direction == "UP":
+            direction_vector = np.array([0, 1, 0])
+        elif direction == "DOWN":
+            direction_vector = np.array([0, -1, 0])
+        elif direction == "LEFT":
+            direction_vector = np.array([-1, 0, 0])
+        elif direction == "RIGHT":
+            direction_vector = np.array([1, 0, 0])
+        elif direction == "FORWARD":
+            direction_vector = np.array([0, 0, -1])
+        elif direction == "BACKWARD":
+            direction_vector = np.array([0, 0, 1])
+
+        direction3D_vector = self.getPointsOnPlane(direction_vector)*self.velocity
+        self.position += direction3D_vector
 
     def checkNormal(self, vectors_original):
         vectors = np.copy(vectors_original)
@@ -44,11 +64,11 @@ class Camera:
 
     def proyectVectorsV2(self, vectors):
         new_vectors = np.empty([2,vectors.shape[1]])
-        zeros = np.zeros([3, 1])
+        positionT = np.transpose(np.expand_dims(self.position, axis=0))
         ones = np.ones([1, vectors.shape[1]])
         vectors = np.concatenate([vectors, ones], axis=0)
         f_matrix = focalMatrix(self.depth)
-        r_matrix = np.concatenate([rotQuatMatrix(self.quat_rotation), zeros], axis=1)
+        r_matrix = np.concatenate([rotQuatMatrix(self.quat_rotation), positionT], axis=1)
         proyected_vectors = np.matmul(f_matrix, np.matmul(r_matrix, vectors))
         for i in range(proyected_vectors.shape[1]):
             new_vectors[:,i] = proyected_vectors[:2,i]/proyected_vectors[2,i]
@@ -211,7 +231,7 @@ depth = 1
 
 ini_cam_pos, ini_cam_rot = np.array([0,0,0]), np.radians(np.array([0,0,0]))
 
-c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
+c = Camera(ini_cam_pos, ini_cam_rot, 1, width, height, depth)
 vectors = np.transpose(np.array([[3.0,2.0, -10.0],[4.0, -2.0, 10.0]]))
 c.rotate2DVector(-0.5, -0.5)
 c.checkNormal(vectors)

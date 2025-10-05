@@ -64,6 +64,8 @@ RUNWINDOW = True
 NEWPROYECTION = True
 DRAW_EDGES = True
 DRAW_VERTEX = True
+
+CAMERA_SPEED = 5
 FPS = 60
 width = 500
 height = 500
@@ -81,7 +83,7 @@ edges = np.array([
     [0]
 ])
 
-c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
+c = Camera(ini_cam_pos, ini_cam_rot, CAMERA_SPEED, width, height, depth)
 cube = Object3D(Cube(np.array([200,200,200])), np.array([0,500,2000]), np.radians(np.array([45,45,0])))
 pyramid = Object3D(Pyramid(np.array([300,300,500])), np.array([700,800,2000]), np.radians(np.array([0,0,0])))
 circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), np.array([-500,-500,1500]), np.radians(np.array([0,0,0])))
@@ -90,7 +92,7 @@ cone = Object3D(Cone(200, 10, 500), np.array([600,-600,1500]), np.radians(np.arr
 cylinder = Object3D(Cylinder(300, 6, 500), np.array([-750,800,2000]), np.radians(np.array([0,-45,0])))
 point = Object3D(Point(), np.array([200,0,1000]), np.radians(np.array([0,0,0])))
 
-dynamic_cube = Dynamic3D(cube, np.array([0,0,0]), np.radians([35,45]), np.array([0,0,2000]), FPS, rotation_type="ORBIT")
+dynamic_cube = Dynamic3D(cube, np.array([5,0,0]), np.radians([35,45]), np.array([0,0,2000]), FPS, rotation_type="ORBIT")
 dynamic_cone = Dynamic3D(cone, np.array([0,0,0]), np.radians(np.array([0,30,15])), "CENTER", FPS)
 dynamic_cylinder = Dynamic3D(cylinder, np.array([0,0,0]), np.radians(np.array([10,30,50])), "CENTER", FPS)
 dynamic_sphere = Dynamic3D(sphere, np.array([0,0,0]), np.radians(np.array([45,30,20])), "CENTER", FPS)
@@ -135,6 +137,7 @@ if RUNWINDOW:
 
         for d in dynamics:
             d.rotate()
+            d.translate()
 
         added_vectors = combine_all_vectors(objects)
 
@@ -148,6 +151,27 @@ if RUNWINDOW:
 
         normal_check = c.checkNormal(added_vectors)
         added_vectors = combine_all_vectors(objects)
+
+        keys = pygame.key.get_pressed()
+        w_pressed = keys[pygame.K_w]
+        s_pressed = keys[pygame.K_s]
+        a_pressed = keys[pygame.K_a]
+        d_pressed = keys[pygame.K_d]
+        up_arrow_pressed = keys[pygame.K_UP]
+        down_arrow_pressed = keys[pygame.K_DOWN]
+
+        if w_pressed:
+            c.move("UP")
+        if s_pressed:
+            c.move("DOWN")
+        if a_pressed:
+            c.move("LEFT")
+        if d_pressed:
+            c.move("RIGHT")
+        if up_arrow_pressed:
+            c.move("FORWARD")
+        if down_arrow_pressed:
+            c.move("BACKWARD")
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -164,6 +188,7 @@ if RUNWINDOW:
                 else:
                     x_diff, y_diff = post_process(current_position - ini_position, False, True)
                 c.rotate2DVector(x_diff, y_diff)
+
 
                 #displayVectors(v2proyected)
                 #displayVectors(xy_vectors)
