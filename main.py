@@ -47,12 +47,24 @@ def combine_all_edges(objects):
             joint_matrix = join_edges_matrix(joint_matrix, object_vectors[i])
         return joint_matrix
 
-def post_process(vectors):
-    correction_matrix = np.array([[1,0],[0,-1]])
+def post_process(vectors, invert_x, invert_y):
+    _x = 1
+    _y = 1
+    if invert_x:
+        _x *= -1
+
+    if invert_y:
+        _y *= -1
+    correction_matrix = np.array([[_x,0],[0,_y]])
     new_vectors = np.matmul(correction_matrix, vectors)
     return new_vectors
 
-#print(v.value)
+
+RUNWINDOW = True
+NEWPROYECTION = True
+DRAW_EDGES = True
+DRAW_VERTEX = True
+FPS = 60
 width = 500
 height = 500
 depth = 500
@@ -70,27 +82,41 @@ edges = np.array([
 ])
 
 c = Camera(ini_cam_pos, ini_cam_rot, width, height, depth)
-cube = Object3D(Cube(np.array([300,300,300])), [0,0,1000], np.radians(np.array([45,45,0])))
-pyramid = Object3D(Pyramid(np.array([300,300,500])), [700,800,2000], np.radians(np.array([0,0,0])))
-circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), [-500,-500,1500], np.radians(np.array([0,0,0])))
-sphere = Object3D(Sphere(50, 50, 10), [-1000,-1000,2500], np.radians(np.array([0,0,0])))
-#o = Object3D(Specific(vectors, edges), [0,0,0], np.radians(np.array([0,0,0])))
-objects = [cube, pyramid, sphere]
+cube = Object3D(Cube(np.array([200,200,200])), np.array([0,500,2000]), np.radians(np.array([45,45,0])))
+pyramid = Object3D(Pyramid(np.array([300,300,500])), np.array([700,800,2000]), np.radians(np.array([0,0,0])))
+circle = Object3D(SemiCircle(300, 4, order="CONVEYOR"), np.array([-500,-500,1500]), np.radians(np.array([0,0,0])))
+sphere = Object3D(Sphere(200, 10, 10), np.array([0,0,2000]), np.radians(np.array([0,0,0])))
+cone = Object3D(Cone(200, 10, 500), np.array([600,-600,1500]), np.radians(np.array([0,30,0])))
+cylinder = Object3D(Cylinder(300, 6, 500), np.array([-750,800,2000]), np.radians(np.array([0,-45,0])))
+point = Object3D(Point(), np.array([200,0,1000]), np.radians(np.array([0,0,0])))
 
+dynamic_cube = Dynamic3D(cube, np.array([0,0,0]), np.radians([35,45]), np.array([0,0,2000]), FPS, rotation_type="ORBIT")
+dynamic_cone = Dynamic3D(cone, np.array([0,0,0]), np.radians(np.array([0,30,15])), "CENTER", FPS)
+dynamic_cylinder = Dynamic3D(cylinder, np.array([0,0,0]), np.radians(np.array([10,30,50])), "CENTER", FPS)
+dynamic_sphere = Dynamic3D(sphere, np.array([0,0,0]), np.radians(np.array([45,30,20])), "CENTER", FPS)
+
+objects = [dynamic_cube, dynamic_sphere]
+dynamics = [dynamic_cube, dynamic_sphere]
 
 added_vectors = combine_all_vectors(objects)
-join_edges_matrix(edges, cube.getEdges())
-projected = c.projectVectors(added_vectors)
-pre_xy_vectors = c.getXYfromVectors(projected)
-xy_vectors = post_process(pre_xy_vectors)
+
+if NEWPROYECTION:
+    pre_xy_vectors = c.proyectVectorsV2(added_vectors)
+    xy_vectors = post_process(pre_xy_vectors, True, False)
+else:
+    projected = c.projectVectors(added_vectors)
+    pre_xy_vectors = c.getXYfromVectors(projected)
+    xy_vectors = post_process(pre_xy_vectors, False, True)
+
 normal_check = c.checkNormal(added_vectors)
 
-RUNWINDOW = True
-DRAW_EDGES = True
-DRAW_VERTEX = False
+#print("AAA")
+#print(xy_vectors.shape)
+#print(v2proyected.shape)
 
 if RUNWINDOW:
     pygame.init()
+    clock = pygame.time.Clock()
 
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Custom Size Window")
@@ -106,6 +132,23 @@ if RUNWINDOW:
 
     running = True
     while running:
+
+        for d in dynamics:
+            d.rotate()
+
+        added_vectors = combine_all_vectors(objects)
+
+        if NEWPROYECTION:
+            pre_xy_vectors = c.proyectVectorsV2(added_vectors)
+            xy_vectors = post_process(pre_xy_vectors, True, False)
+        else:
+            projected = c.projectVectors(added_vectors)
+            pre_xy_vectors = c.getXYfromVectors(projected)
+            xy_vectors = post_process(pre_xy_vectors, False, True)
+
+        normal_check = c.checkNormal(added_vectors)
+        added_vectors = combine_all_vectors(objects)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -116,13 +159,14 @@ if RUNWINDOW:
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 diff = (current_position - ini_position)
-                x_diff, y_diff = post_process(current_position - ini_position)
+                if NEWPROYECTION:
+                    x_diff, y_diff = post_process(current_position - ini_position, True, False)
+                else:
+                    x_diff, y_diff = post_process(current_position - ini_position, False, True)
                 c.rotate2DVector(x_diff, y_diff)
-                added_vectors = combine_all_vectors(objects)
-                projected = c.projectVectors(added_vectors)
-                pre_xy_vectors = c.getXYfromVectors(projected)
-                xy_vectors = post_process(pre_xy_vectors)
-                normal_check = c.checkNormal(added_vectors)
+
+                #displayVectors(v2proyected)
+                #displayVectors(xy_vectors)
                 clicking = False
 
 
@@ -151,6 +195,6 @@ if RUNWINDOW:
                 else:
                     pygame.draw.circle(screen, GRAY, convert_pos((x, y)), 2)
 
-
+        dt = clock.tick(FPS)
         pygame.display.update()
         pygame.display.flip()

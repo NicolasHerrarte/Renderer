@@ -1,6 +1,43 @@
 from Matrix import *
 from Discrete import *
 
+class Dynamic3D:
+    def __init__(self, object3D, translation_anim, rotation_anim, rotation_center, fps, rotation_type="REGULAR"):
+        self.fps = fps
+
+        self.object3D = object3D
+        self.vectors = object3D.getVectors()
+        self.edges = object3D.getEdges()
+        self.rotation_type = rotation_type
+
+        self.translation_anim = translation_anim
+
+
+        if isinstance(rotation_center, str) and rotation_center == "CENTER":
+            self.rotation_center = self.object3D.position
+        else:
+            self.rotation_center = rotation_center
+
+        if rotation_type == "REGULAR":
+            self.rotation_anim_quat = eulerToQuaternion(rotation_anim / self.fps)
+        else:
+            angles, rotation_angle = rotation_anim
+            print(self.object3D.position)
+            direction_vector = centerRotationVector(self.object3D.position, rotation_center, rotation_angle)
+            axis_vector = np.array([angles / self.fps, direction_vector[0], direction_vector[1], direction_vector[2]])
+            self.rotation_anim_quat = axisToQuaternion(axis_vector)
+
+        self.quat_matrix = rotQuatMatrix(self.rotation_anim_quat)
+    def rotate(self):
+        shifted = translateH(self.vectors, -1 * self.rotation_center)
+        rotated = np.matmul(self.quat_matrix, shifted)
+        relocated = translateH(rotated, self.rotation_center)
+        self.vectors = relocated
+    def getVectors(self):
+        return self.vectors
+
+    def getEdges(self):
+        return self.edges
 class Object3D:
     def __init__(self, generator, position, euler_rotation):
         self.vectors = generator.getVertex()
@@ -29,7 +66,6 @@ class Object3D:
 
     def getEdges(self):
         return self.edges
-
 
 class Cube:
     def __init__(self, size):
@@ -79,6 +115,18 @@ class Pyramid:
     def getEdges(self):
         return self.regular_grid
 
+class Point:
+    def __init__(self):
+        self.vectors = np.array([[0],[0],[0]])
+        self.edges = np.array([[0]])
+
+    def getVertex(self):
+        return self.vectors
+
+
+    def getEdges(self):
+        return self.edges
+
 class Specific:
     def __init__(self, vectors, edges):
         self.vectors = vectors
@@ -103,7 +151,7 @@ class Circle:
             [0]
         ])
 
-        print(np.transpose([vectors[:, -1]]))
+        #print(np.transpose([vectors[:, -1]]))
         euler_rot = [0, 0, (2 * math.pi) / self.resolution]
         quat = eulerToQuaternion(euler_rot)
         rot_mat = rotQuatMatrix(quat)
@@ -158,7 +206,7 @@ class Sphere:
         self.radius = radius
         self.segments = segments
         self.rings = rings
-        self.base = SemiCircle(500, self.rings, "CONVEYOR")
+        self.base = SemiCircle(radius, self.rings, "CONVEYOR")
 
     def getVertex(self):
         base = self.base.getVertex()
@@ -197,16 +245,64 @@ class Sphere:
                 mold[y+1, x] = 1
 
         horizontal_vertex = colShiftMatrix((self.segments)*vector_n, vector_n)
-        #print(horizontal_vertex)
         mold[2:, 2:] = mold[2:, 2:]+horizontal_vertex
         mold[0:base_shape, 0:base_shape] = base
         mold = overlapHalvesMatrix(mold)
         return mold
 
+class Cone:
+    def __init__(self, radius, rings, height):
+        self.radius = radius
+        self.rings = rings
+        self.height = height
+        self.base = Circle(radius, self.rings)
+
+    def getVertex(self):
+        base = self.base.getVertex()
+        base = np.concatenate([base, [[0],[0],[self.height]]], axis=1)
+        return base
+
+    def getEdges(self):
+        base = self.base.getEdges()
+        top_edges = np.ones([1, self.rings])
+        cone_edges = np.concatenate([base, top_edges], axis=0)
+        padding = np.zeros([self.rings+1, 1])
+        padded_edges = np.concatenate([cone_edges, padding], axis=1)
+        return padded_edges
+
+class Cylinder:
+    def __init__(self, radius, rings, height):
+        self.radius = radius
+        self.rings = rings
+        self.height = height
+        self.base = Circle(radius, self.rings)
+
+    def getVertex(self):
+        base1 = self.base.getVertex()
+        base2 = self.base.getVertex()
+        base2[-1] += self.height
+        bases = np.concatenate([base1, base2], axis=1)
+        return bases
+
+    def getEdges(self):
+        base1 = self.base.getEdges()
+        print(base1.shape)
+        base2 = self.base.getEdges()
+        filler = np.identity(self.rings)
+        padding = np.zeros(base1.shape)
+
+        upper = np.concatenate([base1, filler], axis=1)
+        lower = np.concatenate([padding, base2], axis=1)
+
+        full = np.concatenate([upper, lower], axis=0)
+        overlapped = overlapHalvesMatrix(full)
+        return overlapped
+
+cylinder = Cylinder(1, 6, 1)
+cylinder.getVertex()
+cylinder.getEdges()
 
 
-s = Sphere(1, 3, 3)
-print(s.getVertex().shape)
-print(s.getEdges())
+
 
 

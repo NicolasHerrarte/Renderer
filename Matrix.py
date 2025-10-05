@@ -20,6 +20,14 @@ def permMatrix(nums, iterations):
 
     return lower_gear
 
+def switchPermutation(size, ind1, ind2):
+    identity = np.identity(size)
+    identity[ind1, ind1] = 0
+    identity[ind2, ind1] = 1
+    identity[ind2, ind2] = 0
+    identity[ind1, ind2] = 1
+    return identity
+
 def colShiftMatrix(size, shifts):
     I = np.identity(size)
     for i in range(shifts):
@@ -131,6 +139,10 @@ def quatInv(quat, decimals=8):
 
     return np.array([q0, -q1, -q2, -q3])
 
+def focalMatrix(focus):
+    focus = np.array([[-focus, 0, 0],[0,-focus,0], [0,0,1]])
+    return focus
+
 def displayVectors(vectors, special=False):
     vectors = np.transpose(vectors)
     for v in vectors:
@@ -202,8 +214,90 @@ def getEquationNormal(a, normal_vector):
     plane_equation = np.concatenate([normal_vector, [D]])
     return plane_equation
 
+def centerRotationVector(vector, center, angle):
+    ini_vector = vector-center
+    ini_vector = np.transpose(np.expand_dims(ini_vector, axis=0))
+    v = matrixFromNullspace(ini_vector)
+    v1 = v[:, 0] / np.linalg.norm(v[:, 0])
+    rot = np.array(np.transpose(ini_vector))
+    rot = rot / np.linalg.norm(rot)
+    rot = np.concatenate([[np.radians(angle)], rot[0]], axis=0)
+    quat = axisToQuaternion(rot)
+    quat_rot = rotQuatMatrix(quat)
+    v_r = np.matmul(quat_rot, v1)
+    v_r = v_r / np.linalg.norm(v_r)
+    return v_r
 
-print(colShiftMatrix(10, 2))
+def permutationInvert(matrix):
+    def getFirstTuple(t):
+        return t[0]
+
+    rows, cols = matrix.shape
+    current_matrix = matrix
+    permutation_matrix = np.identity(rows)
+    rows_ind = rows-cols
+
+    iszero = np.array(matrix == 0).astype(int)
+    countzero = np.sum(iszero, axis=0)
+    indexes = np.arange(cols)
+    zipped_counts = list(zip(countzero, indexes))
+    zipped_counts.sort(reverse=True, key=getFirstTuple)
+    order = [x[1] for x in zipped_counts]
+    print(order)
+
+    for i, inspect_col in enumerate(order):
+        #print(inspect_col, i)
+        if current_matrix[rows_ind+inspect_col, inspect_col] == 0:
+            #print("IS ZERO")
+            switched = False
+            for j in range(rows):
+                #print("J")
+                #print(j)
+                if not switched and current_matrix[j, inspect_col] != 0 and j not in order[:i-rows_ind]:
+                    switched = True
+                    switch_matrix = switchPermutation(rows, j, rows_ind+inspect_col)
+                    current_matrix = np.matmul(switch_matrix, current_matrix)
+                    permutation_matrix = np.matmul(switch_matrix, permutation_matrix)
+
+    return current_matrix, permutation_matrix
+
+def matrixFromNullspace(original_vectors):
+    ind_vectors, perm_inv_matrix = permutationInvert(original_vectors)
+    reverse_perm_matrix = np.transpose(perm_inv_matrix)
+    null_dim = ind_vectors.shape[1]
+    full_space_dim = ind_vectors.shape[0]
+
+    identity_shape = full_space_dim-null_dim
+
+    vectors_T = np.transpose(ind_vectors)
+    #print(vectors_T)
+    #print(vectors_T[:,identity_shape:])
+    matrix_invert = np.linalg.inv(vectors_T[:,identity_shape:])
+
+    mod_matrix = np.matmul(matrix_invert, vectors_T)
+    T_mod = np.transpose(mod_matrix)
+
+    I = np.identity(identity_shape)
+    F = -1*T_mod[0:identity_shape]
+
+    subspace = np.transpose(np.concatenate([I, F], axis=1))
+    perm_subspace = np.matmul(reverse_perm_matrix, subspace)
+    return perm_subspace
+
+#print(matrixFromNullspace(np.array([[0],[1],[0]])))
+
+#m = np.array([[0],[1],[0],[0]])
+#c, p = permutationInvert(m)
+#print(m)
+#print(c)
+#print(p)
+def translateH(vectors, trans):
+    ones = np.ones([1, vectors.shape[1]])
+    appended_vectors = np.concatenate([vectors, ones], axis=0)
+    shift_matrix = np.array([[1, 0, 0, trans[0]], [0, 1, 0, trans[1]], [0, 0, 1, trans[2]], [0, 0, 0, 1]])
+    shifted = np.matmul(shift_matrix, appended_vectors)
+    return shifted[0:3]
+
 
 
 

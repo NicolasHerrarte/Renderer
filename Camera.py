@@ -1,3 +1,5 @@
+import numpy as np
+
 from Matrix import *
 
 CAMERA_DEFAULT_BASE = "REGULAR"
@@ -30,7 +32,7 @@ class Camera:
         constants = np.zeros([cols])
         for c in range(cols):
             if norm[0] != 0:
-                constants[c] = errors[0, c]/norm[0]
+                constants[c] = errors[0, c] / norm[0]
             elif norm[1] != 0:
                 constants[c] = errors[1, c] / norm[1]
             elif norm[2] != 0:
@@ -40,53 +42,18 @@ class Camera:
         boolean_arr = np.array((constants>=0))
         return boolean_arr
 
-    def projectVectors(self, vectors_original):
-        vectors = np.copy(vectors_original)
-        norm = self.normal
-        borders = np.copy(self.corners)
+    def proyectVectorsV2(self, vectors):
+        new_vectors = np.empty([2,vectors.shape[1]])
+        zeros = np.zeros([3, 1])
+        ones = np.ones([1, vectors.shape[1]])
+        vectors = np.concatenate([vectors, ones], axis=0)
+        f_matrix = focalMatrix(self.depth)
+        r_matrix = np.concatenate([rotQuatMatrix(self.quat_rotation), zeros], axis=1)
+        proyected_vectors = np.matmul(f_matrix, np.matmul(r_matrix, vectors))
+        for i in range(proyected_vectors.shape[1]):
+            new_vectors[:,i] = proyected_vectors[:2,i]/proyected_vectors[2,i]
 
-        depth_vector = -norm*self.depth
-        #displayVectors(np.transpose([depth_vector]), special=True)
-        rows, cols = vectors.shape
-        #displayVectors(vectors)
-        for c in range(4):
-            borders[:, c] = borders[:, c]-depth_vector
-        for c in range(cols):
-            vectors[:, c] = vectors[:, c]-depth_vector
-
-        #displayVectors(np.transpose([depth_vector]))
-        x = np.matmul(np.transpose(norm), vectors)
-        constant = np.matmul(borders[:,0], norm)
-        D = -constant
-        t = -np.reciprocal(x)*D
-        for c in range(cols):
-            vectors[:, c] = (vectors[:, c]*t[c])+depth_vector
-        return vectors
-
-    def getXYfromVectors(self, vectors, singular=False):
-        if not singular:
-            ones = np.expand_dims(np.ones(vectors.shape[1]), axis=0)
-            extended_vectors = np.concatenate([vectors, ones], axis=0)
-            plane_equation = self.equation
-            equality = np.matmul(plane_equation, extended_vectors)
-            #print(equality)
-            #assert np.all(np.absolute(equality) < EQUALITY_NUM)
-            inv_quat_rot = quatInv(self.quat_rotation)
-            inv_quat_mat = rotQuatMatrix(inv_quat_rot)
-            relative_vectors = np.matmul(inv_quat_mat, vectors)
-            return relative_vectors[0:-1]
-        else:
-            x, y, z = vectors
-            vector_extended = [x, y, z, 1]
-            plane_equation = self.equation
-            equality = np.matmul(np.transpose(vector_extended), plane_equation)
-            #assert abs(equality) < EQUALITY_NUM
-            inv_quat_rot = quatInv(self.quat_rotation)
-            inv_quat_mat = rotQuatMatrix(inv_quat_rot)
-            relative_vector = np.matmul(inv_quat_mat, vectors)
-            #print(relative_vector)
-            x, y, _ = relative_vector
-            return x, y
+        return new_vectors
 
     def getPointsOnPlane(self, points):
         quat = self.quat_rotation
@@ -188,6 +155,54 @@ class Camera:
 
         plane_equation = np.concatenate([normal_vector, [D]])
         return plane_equation
+
+    def projectVectors(self, vectors_original):
+        vectors = np.copy(vectors_original)
+        norm = self.normal
+        borders = np.copy(self.corners)
+
+        depth_vector = -norm*self.depth
+        #displayVectors(np.transpose([depth_vector]), special=True)
+        rows, cols = vectors.shape
+        #displayVectors(vectors)
+        for c in range(4):
+            borders[:, c] = borders[:, c]-depth_vector
+        for c in range(cols):
+            vectors[:, c] = vectors[:, c]-depth_vector
+
+        #displayVectors(np.transpose([depth_vector]))
+        x = np.matmul(np.transpose(norm), vectors)
+        constant = np.matmul(borders[:,0], norm)
+        D = -constant
+        t = -np.reciprocal(x)*D
+        for c in range(cols):
+            vectors[:, c] = (vectors[:, c]*t[c])+depth_vector
+        return vectors
+
+    def getXYfromVectors(self, vectors, singular=False):
+        if not singular:
+            ones = np.expand_dims(np.ones(vectors.shape[1]), axis=0)
+            extended_vectors = np.concatenate([vectors, ones], axis=0)
+            plane_equation = self.equation
+            equality = np.matmul(plane_equation, extended_vectors)
+            #print(equality)
+            #assert np.all(np.absolute(equality) < EQUALITY_NUM)
+            inv_quat_rot = quatInv(self.quat_rotation)
+            inv_quat_mat = rotQuatMatrix(inv_quat_rot)
+            relative_vectors = np.matmul(inv_quat_mat, vectors)
+            return relative_vectors[0:-1]
+        else:
+            x, y, z = vectors
+            vector_extended = [x, y, z, 1]
+            plane_equation = self.equation
+            equality = np.matmul(np.transpose(vector_extended), plane_equation)
+            #assert abs(equality) < EQUALITY_NUM
+            inv_quat_rot = quatInv(self.quat_rotation)
+            inv_quat_mat = rotQuatMatrix(inv_quat_rot)
+            relative_vector = np.matmul(inv_quat_mat, vectors)
+            #print(relative_vector)
+            x, y, _ = relative_vector
+            return x, y
 
 
 width = 2
