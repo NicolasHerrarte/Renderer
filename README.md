@@ -1,8 +1,6 @@
 # Renderer
 This is a linear algebra inspired project after watching gilbert strang's lectures on MIT OCW. It is a 3D renderer using only numpy for matrix functions
 
-Tree library for visualization of trees
-
 Main File: It is the one responsible for running the pygame looping allowing the 3D rendering window, it creates the camera and respective objects
 
 Camera: Responsibe for the camera and its functionaity
